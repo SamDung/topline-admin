@@ -1,21 +1,15 @@
 <template>
-  <div>
-    <p>哈哈哈</p>
-  </div>
+  <div id="App"></div>
 </template>
 
 <script>
 export default {
   name: 'App',
   data () {
-    return{
-
-    }
+    return {}
   }
 }
 </script>
 
 <style lang="less" scoped>
-
 </style>
-
