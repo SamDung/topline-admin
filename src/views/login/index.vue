@@ -26,6 +26,7 @@
 
 <script>
 import axios from 'axios'
+import '@/vendor/gt'
 export default {
   name: 'AppLogin',
 
@@ -34,7 +35,8 @@ export default {
       form: {
         mobile: '18202400751',
         code: ''
-      }
+      },
+      captchaObj: null //  目的：点击发送验证码滑动框瞬间弹出不换图片，设置初始值    这是通过 initGEEt 得到的极验的验证码对象
     }
   },
 
@@ -45,12 +47,35 @@ export default {
     handleSendCode () {
     //   结构赋值？
       const { mobile } = this.form
+
+      // 如果有captchobj对象 那么就直接让它弹出来
+      if (this.captchaObj) {
+        return this.captchaObj.verify()
+      }
       axios({
         method: 'GET',
         // 什么意思？
         url: `http://ttapi.research.itcast.cn/mp/v1_0/captchas/${mobile}`
       }).then(res => {
-        console.log(res.data)
+        // console.log(res.data)
+        const data = res.data.data
+        // 需要加上全局 init是极验后端给提供的一个方法
+        window.initGeetest({
+          gt: data.gt,
+          challenge: data.challenge,
+          offline: !data.success,
+          new_captcha: true,
+          product: 'bind'
+        }, (captchaObj) => {
+          this.captchaObj = captchaObj
+          // 写到这了确实可以验证极验会给你返回一个captch对象但是看不见
+          captchaObj.onReady(function () {
+            // 只有ready了才能显示验证码
+            captchaObj.verify()
+          }).onSuccess(function () {
+            console.log('极验验证成功')
+          })
+        })
       })
     }
   }
