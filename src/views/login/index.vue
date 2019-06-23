@@ -5,19 +5,22 @@
            <img src="./logo_index.png" alt="黑马头条">
        </div>
        <div class="login-form">
-        <el-form ref="form" :model="form">
-        <el-form-item>
-          <el-input v-model="form.mobile" placeholder="手机号"></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-col :span = "10">
+         <!-- rules配置验证规则 将需要验证的字段通过prop属性配置到组件上
+         ref 获取表单组件 可以手动调用表单组件的验证方法
+          -->
+        <el-form :model="form" :rules="rules" ref="ruleForm">
+          <el-form-item prop="mobile">
+            <el-input v-model="form.mobile" placeholder="手机号"></el-input>
+          </el-form-item>
+          <el-form-item prop="code">
+            <el-col :span = "10">
               <el-input v-model="form.code" placeholder="验证码"></el-input>
-          </el-col>
-          <el-col :span = "10" :offset = "2">
+            </el-col>
+            <el-col :span = "10" :offset = "2">
                 <el-button @click="handleSendCode">获取验证码</el-button>
-          </el-col>
-        </el-form-item>
-        <el-button class="btn" type="primary" @click="onSubmit">登录</el-button>
+            </el-col>
+          </el-form-item>
+          <el-button class="btn" type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
         </el-form>
        </div>
     </div>
@@ -36,13 +39,51 @@ export default {
         mobile: '18202400751',
         code: ''
       },
+      loginLoading: false,
+      rules: {
+        mobile: [
+          { required: true, message: '请输入电话号', trigger: 'blur' },
+          { min: 11, max: 11, message: '长度在11个字符', trigger: 'blur' }
+        ],
+        code: [
+          { required: true, message: '请输入密码', trigger: 'blur' },
+          { min: 6, max: 6, message: '长度在6个字符', trigger: 'blur' }
+        ]
+      },
       captchaObj: null //  目的：点击发送验证码滑动框瞬间弹出不换图片，设置初始值    这是通过 initGEEt 得到的极验的验证码对象
     }
   },
 
   methods: {
-    onSubmit () {
-      console.log('submit!')
+    // 最后一步输入验证码点击登录
+    handleLogin () {
+      this.loading = true
+      // 表单组件有一个方法validata 可以用于获取g表单的状态  说白了就是通过与否
+      this.$refs['ruleForm'].validate(valid => {
+        // 判断如果！valid 那么验证失败
+        if (!valid) {
+          return
+        }
+        this.login()
+      })
+    },
+    // 封装的提交登录
+    login () {
+      axios({
+        method: 'POST',
+        url: 'http://ttapi.research.itcast.cn/mp/v1_0/authorizations',
+        data: this.form
+      }).then(res => {
+        this.loading = false
+        this.$router.push({
+          name: 'home'
+        })
+      }).catch(err => {
+        if (err.response.status === 400) {
+          this.$message.error('登录失败')
+        }
+        this.loading = false
+      })
     },
     handleSendCode () {
     //   结构赋值？
@@ -68,7 +109,7 @@ export default {
           product: 'bind'
         }, (captchaObj) => {
           this.captchaObj = captchaObj
-          // 写到这了确实可以验证极验会给你返回一个captch对象但是看不见
+          // 写到这了确实可以验证极验会给你返回一个captch对象但是看不见图片
           captchaObj.onReady(function () {
             // 只有ready了才能显示验证码
             captchaObj.verify()
@@ -90,8 +131,12 @@ export default {
                 seccode
               }
             }).then(res => {
+              // element提供的一种message消息组件
+              // console.log(res.data) 此时给你返回一组id...name...的数据
+              // this.$router.push({
+              //   name: 'home'
+              // })  // this.$router.pusn('/')
               console.log(res.data)
-              // 开启倒计时效果
             })
           })
         })
