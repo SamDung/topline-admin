@@ -20,6 +20,10 @@
                 <el-button @click="handleSendCode">获取验证码</el-button>
             </el-col>
           </el-form-item>
+          <el-form-item prop="agree">
+            <el-checkbox v-model="form.agree"></el-checkbox>
+            <span>我已阅读并同意<a href="#">用户协议</a>和<a href="#">隐私条款</a></span>
+          </el-form-item>
           <el-button class="btn" type="primary" @click="handleLogin" :loading="loginLoading">登录</el-button>
         </el-form>
        </div>
@@ -37,10 +41,12 @@ export default {
     return {
       form: {
         mobile: '18202400751',
-        code: ''
+        code: '',
+        agree:''
       },
       loginLoading: false,
       rules: {
+        //通过父标签设置rules规则然后通过子标签的prop传递
         mobile: [
           { required: true, message: '请输入电话号', trigger: 'blur' },
           { min: 11, max: 11, message: '长度在11个字符', trigger: 'blur' }
@@ -48,6 +54,10 @@ export default {
         code: [
           { required: true, message: '请输入密码', trigger: 'blur' },
           { min: 6, max: 6, message: '长度在6个字符', trigger: 'blur' }
+        ],
+        agree: [
+          { required: true, message: '请同意用户协议', trigger: 'change' },
+          { pattern: /true/, message: '请同意用户协议', trigger: 'change' }
         ]
       },
       captchaObj: null //  目的：点击发送验证码滑动框瞬间弹出不换图片，设置初始值    这是通过 initGEEt 得到的极验的验证码对象
