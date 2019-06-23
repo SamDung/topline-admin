@@ -42,11 +42,11 @@ export default {
       form: {
         mobile: '18202400751',
         code: '',
-        agree:''
+        agree: ''
       },
       loginLoading: false,
       rules: {
-        //通过父标签设置rules规则然后通过子标签的prop传递
+        // 通过父标签设置rules规则然后通过子标签的prop传递
         mobile: [
           { required: true, message: '请输入电话号', trigger: 'blur' },
           { min: 11, max: 11, message: '长度在11个字符', trigger: 'blur' }
@@ -77,6 +77,7 @@ export default {
         this.login()
       })
     },
+
     // 封装的提交登录
     login () {
       axios({
@@ -95,8 +96,20 @@ export default {
         this.loading = false
       })
     },
+
     handleSendCode () {
-    //   结构赋值？
+      // 检验手机号是否有效
+      this.$refs['ruleForm'].validateField('mobile', errorMessage => {
+        // console.log('errorMessage =>',errorMessage)
+        if (errorMessage.trim().length > 0) {
+          return
+        }
+        // 手机号码有效初始验证码插件
+        this.showGeetest()
+      })
+    },
+    // 封装
+    showGeetest () {
       const { mobile } = this.form
 
       // 如果有captchobj对象 那么就直接让它弹出来
