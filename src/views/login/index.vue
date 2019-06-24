@@ -17,7 +17,8 @@
               <el-input v-model="form.code" placeholder="验证码"></el-input>
             </el-col>
             <el-col :span = "10" :offset = "2">
-                <el-button @click="handleSendCode">获取验证码</el-button>
+                <!-- <el-button @click="handleSendCode">获取验证码</el-button> -->
+                <el-button @click="handleSendCode" :disabled="!!codeTimer || codeLoading">{{ codeTimer ? `剩余${codeSecons}秒` : '获取验证码' }}</el-button>
             </el-col>
           </el-form-item>
           <el-form-item prop="agree">
@@ -34,6 +35,7 @@
 <script>
 import axios from 'axios'
 import '@/vendor/gt'
+const initCodeSeconds = 60
 export default {
   name: 'AppLogin',
 
@@ -60,11 +62,16 @@ export default {
           { pattern: /true/, message: '请同意用户协议', trigger: 'change' }
         ]
       },
-      captchaObj: null //  目的：点击发送验证码滑动框瞬间弹出不换图片，设置初始值    这是通过 initGEEt 得到的极验的验证码对象
+      captchaObj: null, //  目的：点击发送验证码滑动框瞬间弹出不换图片，设置初始值    这是通过 initGEEt 得到的极验的验证码对象
+      codeSecons: initCodeSeconds, // 倒计时的时间
+      codeTimer: null, // 倒计时定时器
+      sendMobile: '', // 保存初始化验证码之后发送的信息
+      codeLoading: false
     }
   },
 
   methods: {
+    // *****箭头函数的this指向实例对象 function定义的函数指向window
     // 最后一步输入验证码点击登录
     handleLogin () {
       this.loading = true
@@ -105,21 +112,47 @@ export default {
           return
         }
         // 手机号码有效初始验证码插件
+        // this.showGeetest()
+        // 手机号码有效，初始化验证码插件
         this.showGeetest()
+        // 手机号码验证通过
+        // 验证是否有验证码插件对象
+        if (this.captchaObj) {
+          // 手机号码有效，初始化验证码插件
+          // this.showGeetest()
+          // 如果用户输入的手机号和之前初始化的验证码手机号不一致，就基于当前手机号码重新初始化
+          // 否则，直接 verify 显示
+          if (this.form.mobile !== this.sendMobile) {
+            // 手机号码发送改变，重新初始化验证码插件
+            // 重新初始化之前，将原来的验证码插件 DOM 删除
+            document.body.removeChild(document.querySelector('.geetest_panel'))
+            // 重新初始化
+            this.showGeetest()
+          } else {
+            // 一致，直接 verify
+            this.captchaObj.verify()
+          }
+        } else {
+          // 这里是第1次的初始化验证码插件
+          this.showGeetest()
+        }
       })
     },
     // 封装
     showGeetest () {
-      const { mobile } = this.form
+      // const { mobile } = this.form
 
-      // 如果有captchobj对象 那么就直接让它弹出来
-      if (this.captchaObj) {
-        return this.captchaObj.verify()
-      }
+      // // 如果有captchobj对象 那么就直接让它弹出来
+      // if (this.captchaObj) {
+      //   return this.captchaObj.verify()
+      // }
+
+      // 初始化验证码期间，禁用按钮的点击状态
+      this.codeLoading = true
       axios({
         method: 'GET',
         // 什么意思？
-        url: `http://ttapi.research.itcast.cn/mp/v1_0/captchas/${mobile}`
+        url: `http://ttapi.research.itcast.cn/mp/v1_0/captchas/${this.form.mobile}`
       }).then(res => {
         // console.log(res.data)
         const data = res.data.data
@@ -135,8 +168,11 @@ export default {
           // 写到这了确实可以验证极验会给你返回一个captch对象但是看不见图片
           captchaObj.onReady(function () {
             // 只有ready了才能显示验证码
+            this.sendMobile = this.form.mobile
             captchaObj.verify()
-          }).onSuccess(function () {
+            // 验证码初始化好了，让 “获取验证码” 按钮可点击
+            this.codeLoading = false
+          }).onSuccess(() => {
             // console.log('极验验证成功')
             console.log(captchaObj.getValidate())
             // 将cap对象结构 作为三个参数
@@ -147,7 +183,7 @@ export default {
               captchaObj.getValidate()
             axios({
               method: 'GET',
-              url: `http://ttapi.research.itcast.cn/mp/v1_0/sms/codes/${mobile}`,
+              url: `http://ttapi.research.itcast.cn/mp/v1_0/sms/codes/${this.form.mobile}`,
               params: {
                 challenge,
                 validate,
@@ -159,11 +195,29 @@ export default {
               // this.$router.push({
               //   name: 'home'
               // })  // this.$router.pusn('/')
-              console.log(res.data)
+              // console.log(res.data)
+              this.codeCountDown()
             })
           })
         })
       })
+    },
+
+    // 倒计时
+    codeCountDown () {
+      // 1.点击验证码把验证码换位直接点击这个倒计时函数
+      // 2.在data里设置初始时间和倒计时定时器
+      // 3.写倒计时
+      this.codeTimer = window.setInterval(() => {
+        this.codeSecons--
+        if (this.codeSecons <= 0) {
+          this.codeSecons = initCodeSeconds // 让倒计时时间回到初始状态
+          window.clearInterval(this.codeTimer) // 清除倒计时
+          this.codeTimer = null // 清除倒计时定时器的标志
+        }
+      }, 1000)
+      // 4.!!123可以吧数字转为布尔值 数据给你分配的是id数
+      // 5. 定义initCodeSeconds初始值 然后让倒计时时间成为动态 不用去dom操作了
     }
   }
 }
